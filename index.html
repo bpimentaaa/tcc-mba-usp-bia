@@ -10,10 +10,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 
-:root{--bg0:#0f172a;--bg1:#1e293b;--bg2:#334155;--tx0:#f8fafc;--tx1:#e2e8f0;--txm:#94a3b8;--txf:#64748b;
-  --brd:#334155;--acc:#f59e0b;--pbg:rgba(15,23,42,.92);--scr:#475569;--cbg:#1e293b;--cbrd:#334155}
-[data-theme="light"]{--bg0:#f1f5f9;--bg1:#ffffff;--bg2:#e2e8f0;--tx0:#0f172a;--tx1:#1e293b;--txm:#64748b;--txf:#94a3b8;
+:root{--bg0:#f1f5f9;--bg1:#ffffff;--bg2:#e2e8f0;--tx0:#0f172a;--tx1:#1e293b;--txm:#64748b;--txf:#94a3b8;
   --brd:#cbd5e1;--acc:#d97706;--pbg:rgba(255,255,255,.92);--scr:#94a3b8;--cbg:#ffffff;--cbrd:#e2e8f0}
+[data-theme="dark"]{--bg0:#0f172a;--bg1:#1e293b;--bg2:#334155;--tx0:#f8fafc;--tx1:#e2e8f0;--txm:#94a3b8;--txf:#64748b;
+  --brd:#334155;--acc:#f59e0b;--pbg:rgba(15,23,42,.92);--scr:#475569;--cbg:#1e293b;--cbrd:#334155}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg0);color:var(--tx1);overflow:hidden;height:100vh}
 #app{display:grid;grid-template-columns:340px 1fr;grid-template-rows:48px 1fr;height:100vh}
@@ -22,8 +22,8 @@ header{grid-column:1/-1;background:linear-gradient(135deg,var(--bg1),var(--bg0))
 header h1{font-size:22.5px;font-weight:600;color:var(--tx0)}
 header h1 span{color:var(--acc)}
 .thm{background:var(--bg2);border:1px solid var(--brd);border-radius:16px;padding:2px;display:flex;cursor:pointer}
-.thm span{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:18px;transition:.2s}
-.thm span.on{background:var(--acc)}
+.thm span{display:flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:14px;font-size:10pt;color:var(--txm);transition:.2s;white-space:nowrap}
+.thm span.on{background:var(--acc);color:#fff}
 #sidebar{background:var(--bg1);border-right:1px solid var(--brd);overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;line-height:1.8}
 #sidebar::-webkit-scrollbar{width:5px}#sidebar::-webkit-scrollbar-thumb{background:var(--scr);border-radius:3px}
 .fs+.fs{margin-top:20px}
@@ -86,7 +86,7 @@ select{width:100%;background:var(--bg0);color:var(--tx1);border:1px solid var(--
 <div id="app">
 <header>
   <h1>Mapa Criminal <span>SP 2020–2025</span> — Ocorrências por Delegacia</h1>
-  <div class="thm" onclick="toggleTheme()"><span id="iD" class="on">&#127769;</span><span id="iL">&#9728;&#65039;</span></div>
+  <div class="thm" onclick="toggleTheme()"><span id="iL" class="on">Tema Claro</span><span id="iD">Tema Escuro</span></div>
 </header>
 <div id="sidebar">
   <div class="fs"><h3>Visualização</h3>
@@ -168,7 +168,7 @@ var maskLayer,borderLayer;
 var selMonths=new Set([0,1,2,3,4,5,6,7,8,9,10,11]);
 var selCrimes=new Set();
 var selDists=new Set(Object.keys(POP_DATA));
-var ch1,ch2,ch3,ch4,distGeo=null,dpToDist={},theme='dark';
+var ch1,ch2,ch3,ch4,distGeo=null,dpToDist={},theme='light';
 
 function normName(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()}
 
@@ -215,7 +215,7 @@ function init(){
 function initMap(){
   map=L.map('map',{zoomControl:false,scrollWheelZoom:false}).setView([-23.55,-46.63],11);
   L.control.zoom({position:'topright'}).addTo(map);
-  tileLayer=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  tileLayer=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
     {attribution:'&copy; CARTO | SSP-SP | IBGE',maxZoom:18}).addTo(map);
   heatLayer=L.heatLayer([],{radius:30,blur:12,maxZoom:14,minOpacity:0.35,
     gradient:{0:'#3b82f6',0.25:'#06b6d4',0.5:'#22c55e',0.65:'#facc15',0.8:'#f97316',1:'#ef4444'}}).addTo(map);
@@ -560,8 +560,8 @@ function renderCharts(data,byDP,crimeSorted){
 
 // ============ THEME ============
 function toggleTheme(){
-  theme=theme==='dark'?'light':'dark';
-  document.documentElement.setAttribute('data-theme',theme);
+  theme=theme==='light'?'dark':'light';
+  document.documentElement.setAttribute('data-theme',theme==='dark'?'dark':'');
   document.getElementById('iD').classList.toggle('on',theme==='dark');
   document.getElementById('iL').classList.toggle('on',theme==='light');
   map.removeLayer(tileLayer);
