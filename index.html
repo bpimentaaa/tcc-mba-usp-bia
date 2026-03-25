@@ -711,16 +711,24 @@ window.addEventListener('resize',function(){
 });
 
 document.addEventListener('DOMContentLoaded',function(){
-  // Se for mobile, mostrar o container do mapa ANTES de o Leaflet inicializar,
-  // para que ele meça dimensões reais e não 0×0 (problema de carregamento em portrait)
   if(window.innerWidth<768){
+    // 1) Mostrar o container do mapa ANTES de o Leaflet inicializar
     var mc=document.getElementById('content');
     if(mc)mc.classList.add('mob-active');
+    // 2) CRÍTICO: esconder o chartsArea antes do init().
+    //    Sem isso, chartsArea (~1200px de altura) consome todo o espaço do
+    //    scrollArea (flex column) e deixa mapWrap com 0px de altura.
+    //    Leaflet mede 0×0 e não consegue se recuperar com invalidateSize().
+    var ca=document.getElementById('chartsArea');
+    if(ca)ca.style.display='none';
   }
-  // requestAnimationFrame garante que o browser aplique o display:flex antes do init()
+  // Double-RAF: 1º frame aplica as mudanças de CSS, 2º frame o layout está completo.
+  // Só então o Leaflet mede o container e enxerga as dimensões reais.
   requestAnimationFrame(function(){
-    init();
-    initMobile();
+    requestAnimationFrame(function(){
+      init();
+      initMobile();
+    });
   });
 });
 
