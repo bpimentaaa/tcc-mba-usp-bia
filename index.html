@@ -80,6 +80,39 @@ select{width:100%;background:var(--bg0);color:var(--tx1);border:1px solid var(--
 .dp-popup td{padding:1px 3px}.dp-popup td:first-child{color:#64748b}.dp-popup td:last-child{font-weight:600;text-align:right}
 .dt-tip{font-size:15px;font-weight:600;color:#1e293b}
 
+/* ===== MOBILE TABS ===== */
+#mobTabs{display:none}
+
+@media(max-width:767px){
+  body{overflow:hidden}
+  #app{grid-template-columns:1fr;grid-template-rows:44px 1fr 56px}
+  header{padding:0 12px}
+  header h1{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(100vw - 160px)}
+  .thm span{padding:3px 7px;font-size:8.5pt}
+
+  #sidebar{display:none;grid-row:2;grid-column:1;border-right:none;overflow-y:auto;height:100%;padding:14px}
+  #sidebar.mob-active{display:flex}
+
+  #content{display:none;grid-row:2;grid-column:1;overflow:hidden;height:100%}
+  #content.mob-active{display:flex}
+
+  #kpiBar{grid-template-columns:repeat(2,1fr);padding:6px 8px;gap:5px}
+  .kc{padding:8px 10px}.kc .kv{font-size:19px}.kc .ki{font-size:17px}
+
+  #mapWrap{height:auto;flex:1;min-height:0;margin:0 8px 6px}
+  #scrollArea{overflow:hidden;display:flex;flex-direction:column}
+  #scrollArea.mob-scroll{overflow-y:auto}
+
+  #chartsArea{grid-template-columns:1fr;grid-template-rows:auto;padding:8px;gap:8px}
+  .gc{height:280px}.gc.fw{grid-column:1}
+
+  #mobTabs{display:flex;background:var(--bg1);border-top:2px solid var(--brd);grid-column:1;grid-row:3;height:56px;z-index:1000}
+  .mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    background:none;border:none;color:var(--txm);font-size:11px;cursor:pointer;font-family:inherit;
+    padding:4px 0;transition:.15s;border-top:2px solid transparent}
+  .mob-tab.on{color:var(--acc);border-top-color:var(--acc)}
+  .mob-tab .mti{font-size:20px;line-height:1}
+}
 </style>
 </head>
 <body>
@@ -145,6 +178,11 @@ select{width:100%;background:var(--bg0);color:var(--tx1);border:1px solid var(--
       <div class="gc"><h4>Top 10 Delegacias por Volume de Ocorrências</h4><canvas id="c3"></canvas></div>
     </div>
   </div>
+</div>
+<div id="mobTabs">
+  <button class="mob-tab on" data-tab="map" onclick="setMobTab('map')"><span class="mti">🗺️</span><span>Mapa</span></button>
+  <button class="mob-tab" data-tab="filters" onclick="setMobTab('filters')"><span class="mti">⚙️</span><span>Filtros</span></button>
+  <button class="mob-tab" data-tab="charts" onclick="setMobTab('charts')"><span class="mti">📊</span><span>Gráficos</span></button>
 </div>
 </div>
 <script>
@@ -408,16 +446,26 @@ function render(){
           iconSize:[0,0]})}).addTo(map);
         lblMarkers.push(m)})}
 
+    // Máximo global: maior total de qualquer DP em qualquer ano (mesmos filtros)
+    // Garante que círculos e calor sejam comparáveis entre anos diferentes
+    var globalMx=1;
+    YEARS.forEach(function(y){
+      var yd=ALL_CRIME_DATA[y].filter(function(r){
+        if(!selCrimes.has(r.cr))return false;
+        var keys=Object.keys(dpToDist);
+        if(keys.length>0){var dd=dpToDist[r.dp];if(dd){if(!selDists.has(dd))return false}}
+        return true});
+      aggregateByDP(yd).forEach(function(d){if(d.total>globalMx)globalMx=d.total});
+    });
+
     if(vizMode==='heat'){
-      var mx=1;byDP.forEach(function(d){if(d.total>mx)mx=d.total});
-      var pts=[];byDP.forEach(function(d){if(d.lt&&d.lg&&d.total>0)pts.push([d.lt,d.lg,Math.sqrt(d.total/mx)])});
+      var pts=[];byDP.forEach(function(d){if(d.lt&&d.lg&&d.total>0)pts.push([d.lt,d.lg,Math.sqrt(d.total/globalMx)])});
       heatLayer.setLatLngs(pts);
       document.getElementById('legend').innerHTML='<h4>Intensidade</h4><div class="lr"><div class="lc" style="background:linear-gradient(90deg,#3b82f6,#06b6d4,#22c55e,#facc15,#f97316,#ef4444);width:90px;height:8px"></div></div><div style="display:flex;justify-content:space-between;width:90px;font-size:9px;color:var(--txf)"><span>Baixa</span><span>Alta</span></div>'}
 
     if(vizMode==='circles'){
-      var mx=1;byDP.forEach(function(d){if(d.total>mx)mx=d.total});
       byDP.forEach(function(d){if(!d.lt||!d.lg||d.total<=0)return;
-        var r=Math.sqrt(d.total/mx)*3000;
+        var r=Math.sqrt(d.total/globalMx)*3000;
         var c=L.circle([d.lt,d.lg],{radius:r,fillColor:'#f59e0b',fillOpacity:0.35,color:'#f59e0b',weight:1,opacity:0.6}).addTo(map);
         c.bindTooltip(makeTip(d));c.bindPopup(makePopup(d),{maxWidth:300});circMarkers.push(c)});
       document.getElementById('legend').innerHTML='<h4>Círculos</h4><div class="lr"><div style="width:7px;height:7px;border-radius:50%;background:#f59e0b;opacity:.5"></div> Menor</div><div class="lr"><div style="width:14px;height:14px;border-radius:50%;background:#f59e0b;opacity:.5"></div> Maior</div>'}
@@ -584,7 +632,54 @@ function selAllD(){Object.keys(POP_DATA).forEach(function(d){selDists.add(d)});
   document.querySelectorAll('#distFilters input').forEach(function(c){c.checked=true});render()}
 function clrD(){selDists.clear();document.querySelectorAll('#distFilters input').forEach(function(c){c.checked=false});render()}
 
-document.addEventListener('DOMContentLoaded',init);
+// ===== MOBILE TABS =====
+function setMobTab(tab){
+  if(window.innerWidth>=768)return;
+  var sidebar=document.getElementById('sidebar');
+  var content=document.getElementById('content');
+  var kpiBar=document.getElementById('kpiBar');
+  var mapWrap=document.getElementById('mapWrap');
+  var chartsArea=document.getElementById('chartsArea');
+  var scrollArea=document.getElementById('scrollArea');
+  document.querySelectorAll('.mob-tab').forEach(function(t){t.classList.toggle('on',t.dataset.tab===tab)});
+  if(tab==='map'){
+    sidebar.classList.remove('mob-active');
+    content.classList.add('mob-active');
+    kpiBar.style.display='grid';
+    mapWrap.style.display='';
+    chartsArea.style.display='none';
+    scrollArea.classList.remove('mob-scroll');
+    setTimeout(function(){if(map)map.invalidateSize();},80);
+  }else if(tab==='filters'){
+    content.classList.remove('mob-active');
+    sidebar.classList.add('mob-active');
+  }else if(tab==='charts'){
+    sidebar.classList.remove('mob-active');
+    content.classList.add('mob-active');
+    kpiBar.style.display='none';
+    mapWrap.style.display='none';
+    chartsArea.style.display='grid';
+    scrollArea.classList.add('mob-scroll');
+  }
+}
+
+function initMobile(){
+  if(window.innerWidth<768)setMobTab('map');
+}
+
+window.addEventListener('resize',function(){
+  var isMob=window.innerWidth<768;
+  if(!isMob){
+    ['sidebar','content','kpiBar','mapWrap','chartsArea','scrollArea'].forEach(function(id){
+      var el=document.getElementById(id);if(el){el.style.display='';el.classList.remove('mob-active','mob-scroll')}});
+    if(map)map.invalidateSize();
+  }else{
+    var active=document.querySelector('.mob-tab.on');
+    if(active)setMobTab(active.dataset.tab);
+  }
+});
+
+document.addEventListener('DOMContentLoaded',function(){init();initMobile();});
 
 </script>
 </body>
